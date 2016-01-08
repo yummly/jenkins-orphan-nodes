@@ -1,0 +1,7 @@
+{:security-group "..."
+ :jenkins-url "https://jenkins..."
+ :user "..."
+ :password "..."
+ :notification-config {:type :slack
+                       ;; You can obtain this from the Slack admin
+                       :url "https://hooks.slack.com/services/..."}}
