@@ -13,10 +13,12 @@
            [com.offbytwo.jenkins.model Computer ComputerWithDetails]
            [java.net URI]
            [org.joda.time DateTime]
-           [com.amazonaws.services.lambda.runtime RequestStreamHandler Context]
+           [com.amazonaws.services.lambda.runtime RequestStreamHandler Context LambdaLogger]
            [java.io PushbackReader]))
 
 (set! *warn-on-reflection* true)
+
+(def ^:dynamic *logger* println)
 
 (defn autoscaling-instance? [{:keys [tags]}]
   (some #(= (:key %) "aws:autoscaling:groupName") tags))
@@ -53,6 +55,8 @@
                             jenkins-url user password]}]
   (let [instances (find-running-instances security-group)
         builders (find-builders jenkins-url user password)]
+    (*logger* (format "Found running instances: %s\n" instances))
+    (*logger* (format "Found active builders: %s\n" builders))
     (set/difference instances builders)))
 
 (defmulti notify (fn [conf & _] (:type conf)))
@@ -67,10 +71,10 @@
                           jenkins-url user password
                           notification-config]
                    :as config}]
-  (let [_ (printf "Running the Jenkins leaked builder detector with config %s\n"
-                  (assoc config :password "XXX"))
+  (let [_ (*logger* (format "Running the Jenkins leaked builder detector with config %s\n"
+                            (assoc config :password "XXX")))
         orphans (find-orphans config)
-        _ (printf "Found leaked builders: %s\n" orphans)
+        _ (*logger* (format "Found leaked builders: %s\n" orphans))
         msg (if (seq orphans)
               (format "Found Jenkins builder instances Jenkins has forgotten about: %s" (clojure.string/join ", " orphans))
               "No leaked Jenkins builders found")]
@@ -94,5 +98,7 @@
 (deflambdafn jenkins_orphan_nodes.core.LambdaFn
   [in out ctx]
   (let [f-n (.getFunctionName ^Context ctx)
-        config (read-config f-n)]
-    (run-report config)))
+        config (read-config f-n)
+        ^LambdaLogger logger (.getLogger ^Context ctx)]
+    (binding [*logger* (fn [^String msg] (.log logger msg))]
+      (run-report config))))

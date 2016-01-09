@@ -21,9 +21,14 @@ file. This is included in the uberjar.
 2. Set your bucket and prefix in resources/lambda.properties.
 3. `lein uberjar`
 4. Make your [config.edn](config.edn) and upload it to `s3://your-bucket/prefix/FUNCTION_NAME/config.edn`
-5. Create a Lambda IAM role with at least the following permissions: `ec2:DescribeInstances` and `s3:GetObject` on your `config.edn` in S3.
+5. Create a Lambda IAM role with at least the following permissions: `ec2:DescribeInstances`, `s3:GetObject` on your `config.edn` in S3, plus the [AWS Logs permissions](aws-logs-policy.json).
 6. Create the function: `aws lambda create-function --region REGION --function-name FUNCTION_NAME --zip-file fileb://target/uberjar/jenkins-orphan-nodes-0.1.0-SNAPSHOT-standalone.jar --role ROLE_ARN --runtime java8 --handler jenkins_orphan_nodes.core.LambdaFn --timeout 59 --memory-size 512`
 7. Test the function.
+
+To upload a new version of the code:
+
+1. `lein uberjar`
+2. `aws lambda update-function-code --region REGION --function-name FUNCTION_NAME --zip-file fileb://target/uberjar/jenkins-orphan-nodes-0.1.0-SNAPSHOT-standalone.jar --publish`
 
 ## Development
 
